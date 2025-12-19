@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+docker-build.sh
+
+# Go modules
+vendor/
+
+# Local development
+.air.toml
+.env
+tmp/
+bin/
+build-errors.log
+
+# Documentation
+*.md
+
+# Other
+Makefile
