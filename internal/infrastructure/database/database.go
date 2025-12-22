@@ -2,7 +2,7 @@ package database
 
 import (
 	"context"
-	"fmt"
+	"sync"
 	"time"
 
 	"github.com/spksupakorn/go-restful-authentication/internal/config"
@@ -18,34 +18,43 @@ type MongoDB struct {
 	logger   *zap.Logger
 }
 
+var (
+	once          sync.Once
+	mongoInstance *MongoDB
+)
+
 // NewMongoDB creates a new MongoDB connection
 func NewMongoDB(cfg *config.Config, logger *zap.Logger) (*MongoDB, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.MongoDB.Timeout)*time.Second)
-	defer cancel()
+	once.Do(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(cfg.MongoDB.Timeout)*time.Second)
+		defer cancel()
 
-	// Set client options
-	clientOptions := options.Client().ApplyURI(cfg.MongoDB.URI)
+		// Set client options
+		clientOptions := options.Client().ApplyURI(cfg.MongoDB.URI)
 
-	// Connect to MongoDB
-	client, err := mongo.Connect(ctx, clientOptions)
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
-	}
+		// Connect to MongoDB
+		client, err := mongo.Connect(ctx, clientOptions)
+		if err != nil {
+			logger.Panic("Failed to connect to MongoDB: %w", zap.Error(err))
+		}
 
-	// Ping the database to verify connection
-	if err := client.Ping(ctx, nil); err != nil {
-		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
-	}
+		// Ping the database to verify connection
+		if err := client.Ping(ctx, nil); err != nil {
+			logger.Panic("Failed to ping MongoDB: %w", zap.Error(err))
+		}
 
-	logger.Info("Successfully connected to MongoDB",
-		zap.String("database", cfg.MongoDB.Database),
-	)
+		logger.Info("Successfully connected to MongoDB",
+			zap.String("database", cfg.MongoDB.Database),
+		)
 
-	return &MongoDB{
-		Client:   client,
-		Database: client.Database(cfg.MongoDB.Database),
-		logger:   logger,
-	}, nil
+		mongoInstance = &MongoDB{
+			Client:   client,
+			Database: client.Database(cfg.MongoDB.Database),
+			logger:   logger,
+		}
+	})
+
+	return mongoInstance, nil
 }
 
 // Close closes the MongoDB connection

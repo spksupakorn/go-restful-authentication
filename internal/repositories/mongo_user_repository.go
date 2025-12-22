@@ -1,4 +1,4 @@
-package database
+package repositories
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/spksupakorn/go-restful-authentication/internal/domain/entities"
 	"github.com/spksupakorn/go-restful-authentication/internal/domain/repositories"
+	"github.com/spksupakorn/go-restful-authentication/internal/infrastructure/database"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -21,7 +22,7 @@ type mongoUserRepository struct {
 }
 
 // NewMongoUserRepository creates a new instance of MongoDB user repository
-func NewMongoUserRepository(db *MongoDB, logger *zap.Logger) repositories.UserRepository {
+func NewMongoUserRepository(db *database.MongoDB, logger *zap.Logger) repositories.UserRepository {
 	collection := db.GetCollection(entities.User{}.CollectionName())
 
 	// Create unique index on email

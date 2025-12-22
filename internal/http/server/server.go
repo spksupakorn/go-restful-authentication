@@ -12,6 +12,8 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spksupakorn/go-restful-authentication/internal/config"
+	"github.com/spksupakorn/go-restful-authentication/internal/repositories"
+
 	"github.com/spksupakorn/go-restful-authentication/internal/http/controllers"
 	"github.com/spksupakorn/go-restful-authentication/internal/http/middlewares"
 	"github.com/spksupakorn/go-restful-authentication/internal/http/routes"
@@ -70,7 +72,7 @@ func NewServer(cfg *config.Config, logger *zap.Logger, db *database.MongoDB) *Se
 // Start starts the HTTP server
 func (s *Server) Start() error {
 	// Initialize dependencies
-	userRepo := database.NewMongoUserRepository(s.db, s.logger)
+	userRepo := repositories.NewMongoUserRepository(s.db, s.logger)
 	jwtManager := jwt.NewJWTManager(s.config)
 	validatorInstance := validator.NewValidator()
 
