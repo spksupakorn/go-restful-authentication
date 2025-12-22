@@ -6,9 +6,32 @@ import (
 	"github.com/spksupakorn/go-restful-authentication/internal/config"
 	"github.com/spksupakorn/go-restful-authentication/internal/http/server"
 	"github.com/spksupakorn/go-restful-authentication/internal/infrastructure/database"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/logger"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/logger"
+
 	"go.uber.org/zap"
+
+	_ "github.com/spksupakorn/go-restful-authentication/docs" // Swagger docs
 )
+
+// @title User Management API
+// @version 1.0
+// @description RESTful API for user management with JWT authentication and MongoDB
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.email support@example.com
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 
 func main() {
 	// Load configuration

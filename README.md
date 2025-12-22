@@ -17,12 +17,14 @@ A production-ready RESTful API built with Go that manages users with MongoDB per
 - ✅ **CORS** enabled
 - ✅ **Unit Tests** with mocks
 - ✅ **Makefile** for common tasks
+- ✅ **Swagger/OpenAPI Documentation** with interactive UI
 
 ## 📋 Requirements
 
 - Go 1.23+
 - MongoDB 7.0+
 - Docker & Docker Compose (optional)
+- Swag CLI (for Swagger generation)
 
 ## 🏗️ Project Structure
 
@@ -100,15 +102,20 @@ cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. **Run MongoDB locally** (if not using Docker)
+5. **Run MongoDB locally** (if not using Docker)
 ```bash
 # Using Docker for MongoDB only
 docker run -d -p 27017:27017 --name mongodb mongo:7.0
 ```
 
-5. **Run the application**
+6. **Run the application**
 ```bash
 make run
+```
+
+7. **Access Swagger UI**
+```
+Open your browser and navigate to: http://localhost:8080/swagger/index.html
 ```
 
 ### Using Docker Compose
@@ -124,14 +131,15 @@ make docker-logs
 make docker-down
 
 # Clean up volumes
-make docker-clean
-```
-
-## 🔑 API Endpoints
-
 ### Public Endpoints (No Authentication Required)
 
 | Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/swagger/index.html` | Interactive Swagger API documentation |
+| POST | `/api/v1/auth/register` | Register a new user |
+| POST | `/api/v1/auth/login` | Login and get JWT tokens |
+| POST | `/api/v1/auth/refresh` | Refresh access token |
+| GET | `/health` | Health check ||
 |--------|----------|-------------|
 | POST | `/api/v1/auth/register` | Register a new user |
 | POST | `/api/v1/auth/login` | Login and get JWT tokens |
@@ -323,6 +331,70 @@ The application runs a background goroutine that logs the total number of users 
 - Goroutine management
 - Graceful shutdown of background tasks
 - Context cancellation
+
+## 📚 Swagger/OpenAPI Documentation
+
+This API includes interactive **Swagger UI** documentation for easy testing and exploration.
+
+### Accessing Swagger UI
+
+Once the application is running, open your browser and navigate to:
+```
+http://localhost:8080/swagger/index.html
+```
+
+### Features:
+- ✅ Interactive API explorer
+- ✅ Try out endpoints directly from the browser
+- ✅ View request/response schemas
+- ✅ Automatic JWT token management
+- ✅ Complete API documentation
+
+### Using Swagger UI:
+
+1. **For Public Endpoints** (Register, Login):
+   - Click on the endpoint
+   - Click "Try it out"
+   - Fill in the request body
+   - Click "Execute"
+
+2. **For Protected Endpoints** (Users):
+   - First, register or login to get an access token
+   - Click the "Authorize" button at the top
+   - Enter: `Bearer YOUR_ACCESS_TOKEN`
+   - Click "Authorize"
+   - Now you can access protected endpoints
+
+### Regenerating Documentation
+
+If you modify API comments in the code:
+
+```bash
+# Regenerate Swagger docs
+make swagger
+
+# Or manually
+swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal
+```
+
+### API Documentation Comments
+
+The Swagger docs are generated from special comments in the code:
+
+```go
+// @Summary Register a new user
+// @Description Register a new user with email and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body dto.RegisterRequest true "Registration request"
+// @Success 201 {object} dto.AuthResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /auth/register [post]
+func (c *UserController) Register(ctx *gin.Context) {
+    // ... implementation
+}
+```
 
 ## 🔐 Security Features
 

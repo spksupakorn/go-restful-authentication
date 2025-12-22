@@ -4,7 +4,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/spksupakorn/go-restful-authentication/internal/http/controllers"
 	"github.com/spksupakorn/go-restful-authentication/internal/http/middlewares"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/jwt"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/jwt"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"go.uber.org/zap"
 )
 
@@ -22,6 +25,9 @@ func SetupRoutes(
 			"service": "user-management-api",
 		})
 	})
+
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")

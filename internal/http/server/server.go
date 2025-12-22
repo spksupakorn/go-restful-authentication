@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/spksupakorn/go-restful-authentication/internal/config"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/jwt"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/validator"
 	"github.com/spksupakorn/go-restful-authentication/internal/repositories"
 
 	"github.com/spksupakorn/go-restful-authentication/internal/http/controllers"
@@ -20,8 +23,7 @@ import (
 	"github.com/spksupakorn/go-restful-authentication/internal/infrastructure/database"
 	"github.com/spksupakorn/go-restful-authentication/internal/services"
 	"github.com/spksupakorn/go-restful-authentication/internal/usecases"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/jwt"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/validator"
+
 	"go.uber.org/zap"
 )
 
@@ -33,6 +35,11 @@ type Server struct {
 	db                *database.MongoDB
 	backgroundService *services.BackgroundService
 }
+
+var (
+	once           sync.Once
+	serverInstance *Server
+)
 
 // NewServer creates a new server instance
 func NewServer(cfg *config.Config, logger *zap.Logger, db *database.MongoDB) *Server {
@@ -61,12 +68,16 @@ func NewServer(cfg *config.Config, logger *zap.Logger, db *database.MongoDB) *Se
 		MaxAge:           12 * time.Hour,
 	}))
 
-	return &Server{
-		config: cfg,
-		logger: logger,
-		router: router,
-		db:     db,
-	}
+	once.Do(func() {
+		serverInstance = &Server{
+			config: cfg,
+			logger: logger,
+			router: router,
+			db:     db,
+		}
+	})
+
+	return serverInstance
 }
 
 // Start starts the HTTP server

@@ -2,13 +2,13 @@ package usecases
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spksupakorn/go-restful-authentication/internal/domain/entities"
 	"github.com/spksupakorn/go-restful-authentication/internal/domain/repositories"
 	"github.com/spksupakorn/go-restful-authentication/internal/dto"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/jwt"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/password"
+	"github.com/spksupakorn/go-restful-authentication/internal/http/custom"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/jwt"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/utils"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.uber.org/zap"
 )
@@ -49,17 +49,17 @@ func (u *userUseCase) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	exists, err := u.userRepo.EmailExists(ctx, req.Email)
 	if err != nil {
 		u.logger.Error("Failed to check email existence", zap.Error(err))
-		return nil, fmt.Errorf("internal server error")
+		return nil, custom.NewUnexpctedError("internal server error")
 	}
 	if exists {
-		return nil, fmt.Errorf("email already exists")
+		return nil, custom.NewBadRequestError("email already exists")
 	}
 
 	// Hash password
-	hashedPassword, err := password.HashPassword(req.Password)
+	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
 		u.logger.Error("Failed to hash password", zap.Error(err))
-		return nil, fmt.Errorf("failed to process password")
+		return nil, custom.NewUnexpctedError("failed to process password")
 	}
 
 	// Create user entity
@@ -72,14 +72,14 @@ func (u *userUseCase) Register(ctx context.Context, req *dto.RegisterRequest) (*
 	// Save user to database
 	if err := u.userRepo.Create(ctx, user); err != nil {
 		u.logger.Error("Failed to create user", zap.Error(err))
-		return nil, fmt.Errorf("failed to create user")
+		return nil, custom.NewUnexpctedError("failed to create user")
 	}
 
 	// Generate tokens
 	tokens, err := u.jwtManager.GenerateTokenPair(user.ID, user.Email)
 	if err != nil {
 		u.logger.Error("Failed to generate tokens", zap.Error(err))
-		return nil, fmt.Errorf("failed to generate tokens")
+		return nil, custom.NewUnexpctedError("failed to generate tokens")
 	}
 
 	u.logger.Info("User registered successfully",
@@ -100,23 +100,23 @@ func (u *userUseCase) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 	user, err := u.userRepo.GetByEmail(ctx, req.Email)
 	if err != nil {
 		u.logger.Warn("Login attempt with non-existent email", zap.String("email", req.Email))
-		return nil, fmt.Errorf("invalid email or password")
+		return nil, custom.NewUnauthorizedError()
 	}
 
 	// Compare password
-	if err := password.ComparePassword(user.Password, req.Password); err != nil {
+	if err := utils.ComparePassword(user.Password, req.Password); err != nil {
 		u.logger.Warn("Login attempt with incorrect password",
 			zap.String("user_id", user.ID.Hex()),
 			zap.String("email", user.Email),
 		)
-		return nil, fmt.Errorf("invalid email or password")
+		return nil, custom.NewUnauthorizedError()
 	}
 
 	// Generate tokens
 	tokens, err := u.jwtManager.GenerateTokenPair(user.ID, user.Email)
 	if err != nil {
 		u.logger.Error("Failed to generate tokens", zap.Error(err))
-		return nil, fmt.Errorf("failed to generate tokens")
+		return nil, custom.NewUnexpctedError("failed to generate tokens")
 	}
 
 	u.logger.Info("User logged in successfully",
@@ -135,13 +135,13 @@ func (u *userUseCase) Login(ctx context.Context, req *dto.LoginRequest) (*dto.Au
 func (u *userUseCase) GetUserByID(ctx context.Context, id string) (*dto.UserResponse, error) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid user ID")
+		return nil, custom.NewBadRequestError("invalid user ID")
 	}
 
 	user, err := u.userRepo.GetByID(ctx, objectID)
 	if err != nil {
 		u.logger.Error("Failed to get user", zap.Error(err), zap.String("id", id))
-		return nil, fmt.Errorf("user not found")
+		return nil, custom.NewNotFoundError("user not found")
 	}
 
 	response := dto.ConvertToUserResponse(user.ID, user.Name, user.Email, user.CreatedAt, user.UpdatedAt)
@@ -163,13 +163,13 @@ func (u *userUseCase) GetAllUsers(ctx context.Context, page, pageSize int) (*dto
 	users, err := u.userRepo.GetAll(ctx, skip, limit)
 	if err != nil {
 		u.logger.Error("Failed to get all users", zap.Error(err))
-		return nil, fmt.Errorf("failed to retrieve users")
+		return nil, custom.NewUnexpctedError("failed to retrieve users")
 	}
 
 	total, err := u.userRepo.Count(ctx)
 	if err != nil {
 		u.logger.Error("Failed to count users", zap.Error(err))
-		return nil, fmt.Errorf("failed to count users")
+		return nil, custom.NewUnexpctedError("failed to count users")
 	}
 
 	userResponses := make([]dto.UserResponse, len(users))
@@ -195,13 +195,13 @@ func (u *userUseCase) GetAllUsers(ctx context.Context, page, pageSize int) (*dto
 func (u *userUseCase) UpdateUser(ctx context.Context, id string, req *dto.UpdateUserRequest) (*dto.UserResponse, error) {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return nil, fmt.Errorf("invalid user ID")
+		return nil, custom.NewBadRequestError("invalid user ID")
 	}
 
 	// Get existing user
 	user, err := u.userRepo.GetByID(ctx, objectID)
 	if err != nil {
-		return nil, fmt.Errorf("user not found")
+		return nil, custom.NewNotFoundError("user not found")
 	}
 
 	// Update fields if provided
@@ -214,10 +214,10 @@ func (u *userUseCase) UpdateUser(ctx context.Context, id string, req *dto.Update
 			exists, err := u.userRepo.EmailExists(ctx, req.Email)
 			if err != nil {
 				u.logger.Error("Failed to check email existence", zap.Error(err))
-				return nil, fmt.Errorf("internal server error")
+				return nil, custom.NewUnexpctedError("internal server error")
 			}
 			if exists {
-				return nil, fmt.Errorf("email already exists")
+				return nil, custom.NewBadRequestError("email already exists")
 			}
 			user.Email = req.Email
 		}
@@ -226,7 +226,7 @@ func (u *userUseCase) UpdateUser(ctx context.Context, id string, req *dto.Update
 	// Update user
 	if err := u.userRepo.Update(ctx, user); err != nil {
 		u.logger.Error("Failed to update user", zap.Error(err))
-		return nil, fmt.Errorf("failed to update user")
+		return nil, custom.NewUnexpctedError("failed to update user")
 	}
 
 	u.logger.Info("User updated successfully", zap.String("user_id", user.ID.Hex()))
@@ -239,12 +239,12 @@ func (u *userUseCase) UpdateUser(ctx context.Context, id string, req *dto.Update
 func (u *userUseCase) DeleteUser(ctx context.Context, id string) error {
 	objectID, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
-		return fmt.Errorf("invalid user ID")
+		return custom.NewBadRequestError("invalid user ID")
 	}
 
 	if err := u.userRepo.Delete(ctx, objectID); err != nil {
 		u.logger.Error("Failed to delete user", zap.Error(err))
-		return fmt.Errorf("failed to delete user")
+		return custom.NewNotFoundError("user not found")
 	}
 
 	u.logger.Info("User deleted successfully", zap.String("user_id", id))
@@ -256,7 +256,7 @@ func (u *userUseCase) RefreshToken(ctx context.Context, refreshToken string) (st
 	accessToken, err := u.jwtManager.RefreshAccessToken(refreshToken)
 	if err != nil {
 		u.logger.Warn("Failed to refresh token", zap.Error(err))
-		return "", fmt.Errorf("invalid refresh token")
+		return "", custom.NewUnauthorizedError()
 	}
 
 	return accessToken, nil

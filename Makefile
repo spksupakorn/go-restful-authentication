@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build docker-up docker-down docker-logs install-deps
+.PHONY: help build run test clean docker-build docker-up docker-down docker-logs install-deps swagger
 
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -7,10 +7,16 @@ install-deps: ## Install Go dependencies
 	go mod download
 	go mod tidy
 
-build: ## Build the application
+swagger: ## Generate Swagger documentation
+	swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal
+	@echo "Swagger documentation generated in docs/"
+
+build: swagger ## Build the application (generates Swagger docs first)
 	go build -o bin/api ./cmd/api
 
 run: ## Run the application
+	@echo "Starting application..."
+	@echo "Swagger UI will be available at: http://localhost:8080/swagger/index.html"
 	go run ./cmd/api/main.go
 
 test: ## Run tests

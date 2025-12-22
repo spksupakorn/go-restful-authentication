@@ -6,7 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spksupakorn/go-restful-authentication/internal/dto"
-	"github.com/spksupakorn/go-restful-authentication/internal/utils/jwt"
+	"github.com/spksupakorn/go-restful-authentication/internal/pkg/jwt"
+
 	"go.uber.org/zap"
 )
 
@@ -25,19 +26,28 @@ func JWTAuthMiddleware(jwtManager *jwt.JWTManager, logger *zap.Logger) gin.Handl
 			return
 		}
 
-		// Check if header starts with "Bearer "
-		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			logger.Warn("Invalid authorization header format")
-			ctx.JSON(http.StatusUnauthorized, dto.ErrorResponse{
-				Error:   "unauthorized",
-				Message: "Invalid authorization header format. Expected: Bearer <token>",
-			})
-			ctx.Abort()
-			return
+		//Get token support no bearer prefix
+		var token string
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			parts := strings.SplitN(authHeader, " ", 2)
+			token = parts[1]
+		} else {
+			token = authHeader
 		}
 
-		token := parts[1]
+		// // Check if header starts with "Bearer "
+		// parts := strings.SplitN(authHeader, " ", 2)
+		// if len(parts) != 2 || parts[0] != "Bearer" {
+		// 	logger.Warn("Invalid authorization header format")
+		// 	ctx.JSON(http.StatusUnauthorized, dto.ErrorResponse{
+		// 		Error:   "unauthorized",
+		// 		Message: "Invalid authorization header format. Expected: Bearer <token>",
+		// 	})
+		// 	ctx.Abort()
+		// 	return
+		// }
+
+		// token := parts[1]
 
 		// Validate token
 		claims, err := jwtManager.ValidateToken(token)
