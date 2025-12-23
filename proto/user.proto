@@ -1,0 +1,110 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/spksupakorn/go-restful-authentication/proto/pb";
+
+// UserService defines the gRPC service for user management
+service UserService {
+  // CreateUser creates a new user with authentication
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+  
+  // GetUser retrieves a user by ID (requires authentication)
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  
+  // ListUsers retrieves all users with pagination (requires authentication)
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+  
+  // UpdateUser updates user details (requires authentication)
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse);
+  
+  // DeleteUser deletes a user (requires authentication)
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse);
+  
+  // Login authenticates a user and returns JWT tokens
+  rpc Login(LoginRequest) returns (LoginResponse);
+}
+
+// User message represents a user entity
+message User {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+
+// CreateUserRequest for user registration
+message CreateUserRequest {
+  string name = 1;
+  string email = 2;
+  string password = 3;
+}
+
+// CreateUserResponse returns created user and tokens
+message CreateUserResponse {
+  User user = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}
+
+// GetUserRequest to retrieve user by ID
+message GetUserRequest {
+  string id = 1;
+}
+
+// GetUserResponse returns user details
+message GetUserResponse {
+  User user = 1;
+}
+
+// ListUsersRequest with pagination
+message ListUsersRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+// ListUsersResponse returns paginated users
+message ListUsersResponse {
+  repeated User users = 1;
+  int64 total = 2;
+  int32 page = 3;
+  int32 page_size = 4;
+  int32 total_pages = 5;
+}
+
+// UpdateUserRequest for updating user
+message UpdateUserRequest {
+  string id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+// UpdateUserResponse returns updated user
+message UpdateUserResponse {
+  User user = 1;
+}
+
+// DeleteUserRequest for deleting user
+message DeleteUserRequest {
+  string id = 1;
+}
+
+// DeleteUserResponse confirms deletion
+message DeleteUserResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// LoginRequest for authentication
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// LoginResponse returns user and tokens
+message LoginResponse {
+  User user = 1;
+  string access_token = 2;
+  string refresh_token = 3;
+}

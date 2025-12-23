@@ -1,4 +1,4 @@
-.PHONY: help build run test clean docker-build docker-up docker-down docker-logs install-deps swagger
+.PHONY: help build run test clean docker-build docker-up docker-down docker-logs install-deps swagger proto
 
 help: ## Display this help screen
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -7,16 +7,24 @@ install-deps: ## Install Go dependencies
 	go mod download
 	go mod tidy
 
+proto: ## Generate gRPC code from proto files
+	protoc --go_out=. --go_opt=paths=source_relative \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		proto/user.proto
+	@echo "gRPC code generated from proto files"
+
 swagger: ## Generate Swagger documentation
 	swag init -g cmd/api/main.go -o docs --parseDependency --parseInternal
 	@echo "Swagger documentation generated in docs/"
 
-build: swagger ## Build the application (generates Swagger docs first)
+build: swagger proto ## Build the application (generates Swagger docs and proto code first)
 	go build -o bin/api ./cmd/api
 
 run: ## Run the application
 	@echo "Starting application..."
-	@echo "Swagger UI will be available at: http://localhost:8080/swagger/index.html"
+	@echo "HTTP Server: http://localhost:8080"
+	@echo "gRPC Server: localhost:8081"
+	@echo "Swagger UI: http://localhost:8080/swagger/index.html"
 	go run ./cmd/api/main.go
 
 test: ## Run tests

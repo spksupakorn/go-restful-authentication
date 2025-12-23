@@ -18,6 +18,7 @@ A production-ready RESTful API built with Go that manages users with MongoDB per
 - ✅ **Unit Tests** with mocks
 - ✅ **Makefile** for common tasks
 - ✅ **Swagger/OpenAPI Documentation** with interactive UI
+- ✅ **gRPC Support** with token-based authentication
 
 ## 📋 Requirements
 
@@ -395,6 +396,108 @@ func (c *UserController) Register(ctx *gin.Context) {
     // ... implementation
 }
 ```
+
+For more details, see [SWAGGER_SETUP.md](SWAGGER_SETUP.md).
+
+## 🔌 gRPC Support
+
+This API also supports **gRPC** for high-performance, language-agnostic communication. Both HTTP REST and gRPC run concurrently.
+
+### gRPC Endpoints
+
+The application runs two servers:
+- **HTTP REST**: `localhost:8080`
+- **gRPC**: `localhost:8081` (HTTP port + 1)
+
+### Available gRPC Methods
+
+```protobuf
+service UserService {
+  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);  // Public
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);          // Protected
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);    // Protected
+  rpc UpdateUser(UpdateUserRequest) returns (UpdateUserResponse); // Protected
+  rpc DeleteUser(DeleteUserRequest) returns (DeleteUserResponse); // Protected
+  rpc Login(LoginRequest) returns (LoginResponse);                // Public
+}
+```
+
+### Testing gRPC with grpcurl
+
+**Install grpcurl:**
+```bash
+# macOS
+brew install grpcurl
+
+# Linux
+go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
+```
+
+**Example gRPC Calls:**
+
+1. **Login** (get tokens):
+```bash
+grpcurl -plaintext \
+  -d '{
+    "email": "john@example.com",
+    "password": "password123"
+  }' \
+  localhost:8081 user.UserService/Login
+```
+
+2. **Create User** (register):
+```bash
+grpcurl -plaintext \
+  -d '{
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "password": "password123"
+  }' \
+  localhost:8081 user.UserService/CreateUser
+```
+
+3. **Get User** (with authentication):
+```bash
+grpcurl -plaintext \
+  -H "authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{"id": "USER_ID"}' \
+  localhost:8081 user.UserService/GetUser
+```
+
+4. **List Users** (with pagination):
+```bash
+grpcurl -plaintext \
+  -H "authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -d '{"page": 1, "page_size": 10}' \
+  localhost:8081 user.UserService/ListUsers
+```
+
+### Authentication
+
+gRPC uses **metadata** for JWT authentication:
+- Public methods: `CreateUser`, `Login`
+- Protected methods: `GetUser`, `ListUsers`, `UpdateUser`, `DeleteUser`
+
+For protected methods, include the token in metadata:
+```bash
+-H "authorization: Bearer YOUR_TOKEN"
+```
+
+The gRPC auth interceptor validates tokens and adds user context.
+
+### Regenerating Proto Files
+
+If you modify `proto/user.proto`:
+
+```bash
+# Generate Go code from proto
+make proto-gen
+
+# Or manually
+protoc --go_out=. --go-grpc_out=. proto/user.proto
+```
+
+For complete gRPC setup instructions, see [GRPC_SETUP.md](GRPC_SETUP.md).
 
 ## 🔐 Security Features
 
